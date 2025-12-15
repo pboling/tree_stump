@@ -11,5 +11,3 @@ module TreeStump
 
   class QueryError < Error; end
 end
-
-require_relative "tree_stump/tree_stump"
