@@ -24,9 +24,9 @@ pub static LANG_LANGUAGES: OnceLock<Mutex<HashMap<String, tree_sitter::Language>
     OnceLock::new();
 
 pub static QUERY_CAPTURE_CLASS: Lazy<RClass> =
-    Lazy::new(|ruby| ruby.define_struct(None, ("node", "index")).unwrap());
+    Lazy::new(|ruby| ruby.define_struct(None, ("node", "index")).expect("Failed to define QueryCapture struct"));
 
-fn register_lang(lang: String, path: String) -> () {
+fn register_lang(lang: String, path: String) -> Result<(), Error> {
     let func_name = String::from("tree_sitter_") + &lang;
     let language;
 
@@ -34,26 +34,41 @@ fn register_lang(lang: String, path: String) -> () {
     let languages = LANG_LANGUAGES.get_or_init(|| Mutex::new(HashMap::new()));
 
     unsafe {
-        let mut libraries = libraries.lock().unwrap();
-        let lib = libraries.entry(lang.clone()).or_insert_with(|| {
-            let loaded = Library::new(path).expect("Failed to load library");
-            loaded
-        });
+        let mut libraries = libraries.lock().map_err(|e| {
+            Error::new(magnus::exception::runtime_error(), format!("Failed to acquire library lock: {}", e))
+        })?;
+        let lib = match libraries.entry(lang.clone()) {
+            std::collections::hash_map::Entry::Occupied(e) => e.into_mut(),
+            std::collections::hash_map::Entry::Vacant(e) => {
+                let loaded = Library::new(&path).map_err(|err| {
+                    Error::new(magnus::exception::runtime_error(), format!("Failed to load library '{}': {}", path, err))
+                })?;
+                e.insert(loaded)
+            }
+        };
 
         let func: libloading::Symbol<unsafe extern "C" fn() -> *const TSLanguage> =
-            lib.get(func_name.as_bytes()).unwrap();
+            lib.get(func_name.as_bytes()).map_err(|err| {
+                Error::new(magnus::exception::runtime_error(), format!("Failed to find symbol '{}': {}", func_name, err))
+            })?;
 
         language = tree_sitter::Language::from_raw(func());
 
-        let mut languages = languages.lock().unwrap();
+        let mut languages = languages.lock().map_err(|e| {
+            Error::new(magnus::exception::runtime_error(), format!("Failed to acquire language lock: {}", e))
+        })?;
         languages.insert(lang.to_string(), language);
     };
+
+    Ok(())
 }
 
-fn available_langs() -> Vec<String> {
+fn available_langs() -> Result<Vec<String>, Error> {
     let languages = LANG_LANGUAGES.get_or_init(|| Mutex::new(HashMap::new()));
-    let languages = languages.lock().unwrap();
-    languages.keys().cloned().collect()
+    let languages = languages.lock().map_err(|e| {
+        Error::new(magnus::exception::runtime_error(), format!("Failed to acquire language lock: {}", e))
+    })?;
+    Ok(languages.keys().cloned().collect())
 }
 
 #[magnus::init]
@@ -282,7 +297,8 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     )?;
 
     Lazy::force(&QUERY_CAPTURE_CLASS, ruby);
-    let struct_class = Lazy::try_get_inner(&QUERY_CAPTURE_CLASS).unwrap();
+    let struct_class = Lazy::try_get_inner(&QUERY_CAPTURE_CLASS)
+        .ok_or_else(|| Error::new(magnus::exception::runtime_error(), "Failed to get QueryCapture struct class"))?;
     namespace.const_set("QueryCapture", struct_class)?;
 
     let query_match_class = namespace.define_class("QueryMatch", ruby.class_object())?;

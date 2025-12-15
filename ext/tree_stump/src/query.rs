@@ -50,7 +50,9 @@ impl Query {
             .capture_quantifiers(index)
             .iter()
             .map(|q| format!("{:?}", q).into_symbol());
-        let ruby = Ruby::get().expect("Ruby is not initialized");
+        let ruby = Ruby::get().map_err(|_| {
+            Error::new(magnus::exception::runtime_error(), "Ruby is not initialized")
+        })?;
         let array = ruby.ary_from_iter(quantifiers);
         Ok(array)
     }
@@ -184,10 +186,14 @@ impl QueryCursor {
         let start: Value = range.beg()?;
         let end: Value = range.end()?;
 
-        let start_typed_data = RTypedData::from_value(start).expect("Expected typed data");
+        let start_typed_data = RTypedData::from_value(start).ok_or_else(|| {
+            Error::new(magnus::exception::type_error(), "Expected typed data for start point")
+        })?;
         let start = start_typed_data.get::<Point>()?;
 
-        let end_typed_data = RTypedData::from_value(end).expect("Expected typed data");
+        let end_typed_data = RTypedData::from_value(end).ok_or_else(|| {
+            Error::new(magnus::exception::type_error(), "Expected typed data for end point")
+        })?;
         let end = end_typed_data.get::<Point>()?;
 
         let point_range = start.into_raw()..end.into_raw();

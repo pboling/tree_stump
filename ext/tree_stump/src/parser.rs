@@ -21,7 +21,9 @@ impl Parser {
 
     pub fn set_language(&self, lang: String) -> Result<bool, magnus::Error> {
         let languages = LANG_LANGUAGES.get_or_init(|| Mutex::new(HashMap::new()));
-        let languages = languages.lock().unwrap();
+        let languages = languages.lock().map_err(|e| {
+            build_error(format!("Failed to acquire language lock: {}", e))
+        })?;
         let language = languages.get(&lang);
         match language {
             Some(language) => {

@@ -507,11 +507,11 @@ impl<'tree> Node<'tree> {
         self.raw_node.to_sexp()
     }
 
-    pub fn utf8_text(&self, source: String) -> String {
+    pub fn utf8_text(&self, source: String) -> Result<String, magnus::Error> {
         self.raw_node
             .utf8_text(source.as_bytes())
-            .unwrap()
-            .to_string()
+            .map(|s| s.to_string())
+            .map_err(|e| magnus::Error::new(magnus::exception::runtime_error(), format!("Failed to get utf8 text: {}", e)))
     }
 
     pub fn walk(&self) -> TreeCursor {
