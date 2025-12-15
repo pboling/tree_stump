@@ -52,9 +52,10 @@ puts tree.root_node.to_sexp
 - tree-sitter-ruby
 
 1. Download source of tree-sitter-ruby from [GitHub Repository](https://github.com/tree-sitter/tree-sitter-ruby).
-1. Extract tree-sitter-ruby source
-1. mv tree-sitter-ruby-v{version_num} to tree_stump/tree-sitter-ruby
-1. Execute `make` in tree-sitter-ruby directory
+2. Extract tree-sitter-ruby source
+3. mv tree-sitter-ruby-v{version_num} to tree_stump/tree-sitter-ruby
+4. Execute `make` in tree-sitter-ruby directory
+5. Execute `bundle exec rake compile`
 
 ## Contributing
 
