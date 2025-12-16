@@ -3,11 +3,7 @@
 require_relative "tree_stump/version"
 
 module TreeStump
-  class Error < StandardError;
-    def initialize(msg)
-      super(msg)
-    end
-  end
+  class Error < StandardError; end
 
   class QueryError < Error; end
 end
