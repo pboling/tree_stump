@@ -12,5 +12,6 @@
 *.a
 mkmf.log
 target/
+.ruby-version
 
 Gemfile.lock
