@@ -5,8 +5,14 @@ on:
     - cron: "0 9 * * 1"
   push:
     branches:
-      - main
+      - 'main'
+    tags:
+      - '!*' # Do not execute on tags
   pull_request:
+    branches:
+      - '*'
+  # Allow manually triggering the workflow.
+  workflow_dispatch:
 
 env:
   RUSTFLAGS: "-W warnings"
