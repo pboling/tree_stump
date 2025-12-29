@@ -28,6 +28,7 @@ jobs:
         ruby-version: ['3.2', '3.3', '3.4', '4.0']
         experimental: [false]
         include:
+          # ruby-head - experimental, see if coming changes in MRI Ruby will break tree_stump
           - ruby-version: 'ruby-head'
             experimental: true
 
