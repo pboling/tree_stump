@@ -24,7 +24,7 @@ tree_stump is a Rust native extension using [magnus](https://github.com/matsadle
 | **TruffleRuby** | ❌ No | magnus/rb-sys are incompatible with TruffleRuby's C API emulation |
 
 <details>
-    <section>Why JRuby doesn't work</section>
+    <summary>Why JRuby doesn't work</summary>
 
 JRuby runs on the Java Virtual Machine and cannot load native C/Rust extensions (`.so` files). The `rb-sys` build system fails during `extconf.rb` because JRuby doesn't provide the platform detection APIs that native extensions require.
 
@@ -33,7 +33,7 @@ JRuby runs on the Java Virtual Machine and cannot load native C/Rust extensions 
 </details>
 
 <details>
-    <section>Why TruffleRuby doesn't work</section>
+    <summary>Why TruffleRuby doesn't work</summary>
 
 TruffleRuby implements Ruby on GraalVM, not as a C program. While it has a C API emulation layer (via Sulong/LLVM), this layer doesn't expose all of MRI's internal structures that `magnus` requires:
 
@@ -83,7 +83,7 @@ puts tree.root_node.to_sexp
 ### Requirements
 
 - Rust Toolchain
-- MRI Ruby (not JRuby, or TruffleRuby)
+- MRI Ruby (not JRuby or TruffleRuby)
 - tree-sitter-ruby
 
 1. Download source of tree-sitter-ruby from [GitHub Repository](https://github.com/tree-sitter/tree-sitter-ruby).
