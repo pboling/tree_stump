@@ -21,10 +21,14 @@ jobs:
   test:
 
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
-        ruby-version: ['3.2', '3.3', '3.4', '4.0.0']
+        ruby-version: ['3.2', '3.3', '3.4', '4.0']
+        include:
+          - ruby-version: 'ruby-head'
+            experimental: true
 
     steps:
       - uses: actions/checkout@v4

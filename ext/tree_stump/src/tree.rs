@@ -229,7 +229,8 @@ impl<'tree> Node<'tree> {
     }
 
     pub fn child(&self, index: usize) -> Option<Self> {
-        self.raw_node.child(index as u32).map(|node| Self {
+        let index_u32: u32 = index.try_into().ok()?;
+        self.raw_node.child(index_u32).map(|node| Self {
             raw_tree: Arc::clone(&self.raw_tree),
             raw_node: node,
         })
@@ -240,7 +241,8 @@ impl<'tree> Node<'tree> {
     }
 
     pub fn named_child(&self, index: usize) -> Option<Self> {
-        self.raw_node.named_child(index as u32).map(|node| Self {
+        let index_u32: u32 = index.try_into().ok()?;
+        self.raw_node.named_child(index_u32).map(|node| Self {
             raw_tree: Arc::clone(&self.raw_tree),
             raw_node: node,
         })
