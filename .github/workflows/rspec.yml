@@ -25,52 +25,33 @@ jobs:
       fail-fast: false
       matrix:
         ruby-version: ['3.2', '3.3', '3.4', '4.0.0']
-        experimental: [false]
-        include:
-          # TruffleRuby - experimental, may not work with Rust extensions yet
-          - ruby-version: 'truffleruby'
-            experimental: true
-          # JRuby - expected to fail (no C/Rust extension support)
-          - ruby-version: 'jruby'
-            experimental: true
-
-    continue-on-error: ${{ matrix.experimental }}
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: "recursive"
 
-      # TruffleRuby runs on GraalVM (needs Java), JRuby runs on JVM
-      - name: Set up Java
-        if: startsWith(matrix.ruby-version, 'truffleruby') || startsWith(matrix.ruby-version, 'jruby')
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '23'
-
-      # Official tree-sitter action for library and CLI (with caching)
-      # Note: This action only sets up Rust conditionally (when building CLI from source
-      # AND cache miss), so we still need explicit Rust setup below for tree_stump
-      - name: Install tree-sitter library and CLI
-        uses: tree-sitter/setup-action@v2
+      # Use ts-grammar-action for tree-sitter library, CLI, and toolchain setup
+      # Sets up Rust for tree_stump compilation
+      - name: Set up tree-sitter environment
+        uses: kettle-rb/ts-grammar-action@v1
         with:
           install-cli: true
           install-lib: true
-
-      # Explicit Rust setup required for tree_stump compilation
-      # (tree-sitter action only sets up Rust when building CLI from source AND cache miss)
-      - name: Set up Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+          # Rust is required for tree_stump gem compilation
+          setup-rust: true
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
-          bundler-cache: true
+          bundler-cache: true # runs 'bundle install' and caches installed gems automatically
 
       - name: Build tree-sitter-ruby grammar
-        run: cd tree-sitter-ruby && make
+        run: cd tree-sitter-ruby && ls && make
+
+      - name: List files
+        run: ls && ls tree-sitter-ruby
 
       - name: Run tests
         run: bundle exec rake
