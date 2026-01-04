@@ -27,6 +27,7 @@ impl Parser {
         let language = languages.get(&lang);
         match language {
             Some(language) => {
+                // tree-sitter 0.26+ set_language takes impl Into<LanguageRef<'_>>
                 let result = self.raw_parser.borrow_mut().set_language(language);
                 result.map_or_else(|e| Err(build_error(e.to_string())), |_| Ok(true))
             }
@@ -47,16 +48,16 @@ impl Parser {
         self.raw_parser.borrow_mut().reset();
     }
 
-    pub fn timeout_micros(&self) -> u64 {
-        self.raw_parser.borrow().timeout_micros()
-    }
+    // NOTE: timeout_micros and set_timeout_micros were removed in tree-sitter 0.26
+    // The timeout functionality is no longer available in the C/Rust API
 
-    pub fn set_timeout_micros(&self, timeout: u64) {
-        self.raw_parser.borrow_mut().set_timeout_micros(timeout);
-    }
-
-    fn language(&self) -> Option<tree_sitter::Language> {
-        self.raw_parser.borrow().language()
+    fn language(&self) -> Option<tree_sitter::LanguageRef<'static>> {
+        // tree-sitter 0.24+ returns LanguageRef
+        // We need to use unsafe to extend the lifetime since the language outlives the parser borrow
+        self.raw_parser.borrow().language().map(|lang_ref| {
+            // SAFETY: The language is stored globally and outlives all parsers
+            unsafe { std::mem::transmute::<tree_sitter::LanguageRef<'_>, tree_sitter::LanguageRef<'static>>(lang_ref) }
+        })
     }
 
     pub fn build_query(&self, source: String) -> Result<Query, magnus::Error> {

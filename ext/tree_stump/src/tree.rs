@@ -192,6 +192,10 @@ impl<'tree> Node<'tree> {
         self.raw_node.is_error()
     }
 
+    pub fn is_missing(&self) -> bool {
+        self.raw_node.is_missing()
+    }
+
     pub fn parse_state(&self) -> u16 {
         self.raw_node.parse_state()
     }
@@ -225,7 +229,7 @@ impl<'tree> Node<'tree> {
     }
 
     pub fn child(&self, index: usize) -> Option<Self> {
-        self.raw_node.child(index).map(|node| Self {
+        self.raw_node.child(index as u32).map(|node| Self {
             raw_tree: Arc::clone(&self.raw_tree),
             raw_node: node,
         })
@@ -236,7 +240,7 @@ impl<'tree> Node<'tree> {
     }
 
     pub fn named_child(&self, index: usize) -> Option<Self> {
-        self.raw_node.named_child(index).map(|node| Self {
+        self.raw_node.named_child(index as u32).map(|node| Self {
             raw_tree: Arc::clone(&self.raw_tree),
             raw_node: node,
         })
@@ -416,7 +420,7 @@ impl<'tree> Node<'tree> {
     ) -> Result<Option<Self>, Error> {
         Ok(self
             .raw_node
-            .child_containing_descendant(descendant.raw_node)
+            .child_with_descendant(descendant.raw_node)
             .map(|node| Self {
                 raw_tree: Arc::clone(&self.raw_tree),
                 raw_node: node,

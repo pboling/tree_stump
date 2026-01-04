@@ -7,6 +7,7 @@ use magnus::{
     value::{InnerRef, Opaque, ReprValue},
     Class, Error, IntoValue, RArray, RStruct, RTypedData, Ruby, Value,
 };
+use streaming_iterator::StreamingIterator;
 
 use crate::{data::Point, tree::Node, util::build_error, QUERY_CAPTURE_CLASS};
 
@@ -17,7 +18,7 @@ pub struct Query {
 }
 
 impl Query {
-    pub fn new(language: &tree_sitter::Language, source: String) -> Result<Self, magnus::Error> {
+    pub fn new(language: &tree_sitter::LanguageRef<'_>, source: String) -> Result<Self, magnus::Error> {
         let raw_query = tree_sitter::Query::new(language, source.as_str());
         let raw_query = raw_query.map_err(|e| build_error(e.to_string()));
         raw_query.map(|q| Self {
@@ -130,11 +131,12 @@ impl QueryCursor {
         let mut cursor = rb_self.raw_cursor.borrow_mut();
         let raw_query = query.raw_query.borrow();
 
-        let matches = cursor.matches(&raw_query, node.get_raw_node(), source.as_bytes());
+        let mut matches = cursor.matches(&raw_query, node.get_raw_node(), source.as_bytes());
         let struct_class = QUERY_CAPTURE_CLASS.get_inner_ref_with(ruby);
         let array = ruby.ary_new();
 
-        for m in matches {
+        // tree-sitter 0.24+ uses StreamingIterator instead of Iterator
+        while let Some(m) = matches.next() {
             let captures = ruby.ary_new();
             for c in m.captures {
                 let r_struct = RStruct::from_value(

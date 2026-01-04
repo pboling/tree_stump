@@ -1,7 +1,6 @@
 use magnus::{function, method, prelude::*, typed_data, value::Lazy, Error, RClass, Ruby};
 
 use libloading::Library;
-use tree_sitter::ffi::TSLanguage;
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -47,12 +46,13 @@ fn register_lang(lang: String, path: String) -> Result<(), Error> {
             }
         };
 
-        let func: libloading::Symbol<unsafe extern "C" fn() -> *const TSLanguage> =
+        // In tree-sitter 0.26+, we use tree_sitter_language::LanguageFn
+        let func: libloading::Symbol<tree_sitter_language::LanguageFn> =
             lib.get(func_name.as_bytes()).map_err(|err| {
                 Error::new(magnus::exception::runtime_error(), format!("Failed to find symbol '{}': {}", func_name, err))
             })?;
 
-        language = tree_sitter::Language::from_raw(func());
+        language = tree_sitter::Language::from(*func);
 
         let mut languages = languages.lock().map_err(|e| {
             Error::new(magnus::exception::runtime_error(), format!("Failed to acquire language lock: {}", e))
@@ -82,8 +82,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     parser_class.define_method("set_language", method!(Parser::set_language, 1))?;
     parser_class.define_method("parse", method!(Parser::parse, 1))?;
     parser_class.define_method("reset", method!(Parser::reset, 0))?;
-    parser_class.define_method("timeout_micros", method!(Parser::timeout_micros, 0))?;
-    parser_class.define_method("set_timeout_micros", method!(Parser::set_timeout_micros, 1))?;
+    // NOTE: timeout_micros was removed in tree-sitter 0.26
     parser_class.define_method("build_query", method!(Parser::build_query, 1))?;
 
     let tree_class = namespace.define_class("Tree", ruby.class_object())?;
@@ -122,15 +121,19 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     node_class.define_method("eql?", method!(<Node as typed_data::IsEql>::is_eql, 1))?;
     node_class.define_method("id", method!(Node::id, 0))?;
     node_class.define_method("kind", method!(Node::kind, 0))?;
+    node_class.define_method("type", method!(Node::kind, 0))?; // Alias for compatibility
     node_class.define_method("kind_id", method!(Node::kind_id, 0))?;
     node_class.define_method("grammar_id", method!(Node::grammar_id, 0))?;
     node_class.define_method("grammar_name", method!(Node::grammar_name, 0))?;
     node_class.define_method("language", method!(Node::language, 0))?;
     node_class.define_method("is_named?", method!(Node::is_named, 0))?;
+    node_class.define_method("named?", method!(Node::is_named, 0))?; // Alias for compatibility
     node_class.define_method("is_extra?", method!(Node::is_extra, 0))?;
     node_class.define_method("has_changes?", method!(Node::has_changes, 0))?;
     node_class.define_method("has_error?", method!(Node::has_error, 0))?;
     node_class.define_method("is_error?", method!(Node::is_error, 0))?;
+    node_class.define_method("is_missing?", method!(Node::is_missing, 0))?;
+    node_class.define_method("missing?", method!(Node::is_missing, 0))?; // Alias for compatibility
     node_class.define_method("parse_state", method!(Node::parse_state, 0))?;
     node_class.define_method("next_parse_state", method!(Node::next_parse_state, 0))?;
     node_class.define_method("start_byte", method!(Node::start_byte, 0))?;
@@ -138,7 +141,9 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     node_class.define_method("byte_range", method!(Node::byte_range, 0))?;
     node_class.define_method("range", method!(Node::range, 0))?;
     node_class.define_method("start_position", method!(Node::start_position, 0))?;
+    node_class.define_method("start_point", method!(Node::start_position, 0))?; // Alias for compatibility
     node_class.define_method("end_position", method!(Node::end_position, 0))?;
+    node_class.define_method("end_point", method!(Node::end_position, 0))?; // Alias for compatibility
     node_class.define_method("child", method!(Node::child, 1))?;
     node_class.define_method("child_count", method!(Node::child_count, 0))?;
     node_class.define_method("named_child", method!(Node::named_child, 1))?;
@@ -195,6 +200,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
 
     node_class.define_method("to_sexp", method!(Node::to_sexp, 0))?;
     node_class.define_method("utf8_text", method!(Node::utf8_text, 1))?;
+    node_class.define_method("text", method!(Node::utf8_text, 1))?; // Alias for compatibility
     node_class.define_method("walk", method!(Node::walk, 0))?;
 
     node_class.define_method("inspect", method!(Node::inspect, 0))?;
@@ -230,6 +236,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
 
     let language_class = namespace.define_class("LanguageRef", ruby.class_object())?;
     language_class.define_method("version", method!(LanguageRef::version, 0))?;
+    language_class.define_method("abi_version", method!(LanguageRef::abi_version, 0))?;
     language_class.define_method("node_kind_count", method!(LanguageRef::node_kind_count, 0))?;
     language_class.define_method(
         "parse_state_count",
