@@ -76,7 +76,7 @@ impl Parser {
             build_error(format!("Language {} is no longer registered", lang_name))
         })?;
 
-        // Get a LanguageRef that borrows from the global map while we hold the lock
-        Query::new(&language.into(), source)
+        // Clone the language to pass to Query::new
+        Query::new(language, source)
     }
 }

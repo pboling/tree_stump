@@ -21,6 +21,9 @@ pub fn build_error(message: impl Into<Cow<'static, str>>) -> magnus::Error {
             magnus::Error::new(error_class, message)
         }
         Err(_) => {
+            // Fallback when Ruby isn't initialized - use deprecated function
+            // This case should rarely happen in practice
+            #[allow(deprecated)]
             magnus::Error::new(magnus::exception::runtime_error(), message)
         }
     }

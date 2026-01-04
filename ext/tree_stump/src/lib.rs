@@ -17,6 +17,7 @@ use crate::language::{LanguageRef, LookaheadIterator};
 use crate::parser::Parser;
 use crate::query::{Query, QueryCursor, QueryMatch};
 use crate::tree::{Node, Tree, TreeCursor};
+use crate::util::build_error;
 
 pub static LANG_LIBRARIES: OnceLock<Mutex<HashMap<String, Library>>> = OnceLock::new();
 pub static LANG_LANGUAGES: OnceLock<Mutex<HashMap<String, tree_sitter::Language>>> =
@@ -34,13 +35,13 @@ fn register_lang(lang: String, path: String) -> Result<(), Error> {
 
     unsafe {
         let mut libraries = libraries.lock().map_err(|e| {
-            Error::new(magnus::exception::runtime_error(), format!("Failed to acquire library lock: {}", e))
+            build_error(format!("Failed to acquire library lock: {}", e))
         })?;
         let lib = match libraries.entry(lang.clone()) {
             std::collections::hash_map::Entry::Occupied(e) => e.into_mut(),
             std::collections::hash_map::Entry::Vacant(e) => {
                 let loaded = Library::new(&path).map_err(|err| {
-                    Error::new(magnus::exception::runtime_error(), format!("Failed to load library '{}': {}", path, err))
+                    build_error(format!("Failed to load library '{}': {}", path, err))
                 })?;
                 e.insert(loaded)
             }
@@ -49,13 +50,13 @@ fn register_lang(lang: String, path: String) -> Result<(), Error> {
         // In tree-sitter 0.26+, we use tree_sitter_language::LanguageFn
         let func: libloading::Symbol<tree_sitter_language::LanguageFn> =
             lib.get(func_name.as_bytes()).map_err(|err| {
-                Error::new(magnus::exception::runtime_error(), format!("Failed to find symbol '{}': {}", func_name, err))
+                build_error(format!("Failed to find symbol '{}': {}", func_name, err))
             })?;
 
         language = tree_sitter::Language::from(*func);
 
         let mut languages = languages.lock().map_err(|e| {
-            Error::new(magnus::exception::runtime_error(), format!("Failed to acquire language lock: {}", e))
+            build_error(format!("Failed to acquire language lock: {}", e))
         })?;
         languages.insert(lang.to_string(), language);
     };
@@ -66,7 +67,7 @@ fn register_lang(lang: String, path: String) -> Result<(), Error> {
 fn available_langs() -> Result<Vec<String>, Error> {
     let languages = LANG_LANGUAGES.get_or_init(|| Mutex::new(HashMap::new()));
     let languages = languages.lock().map_err(|e| {
-        Error::new(magnus::exception::runtime_error(), format!("Failed to acquire language lock: {}", e))
+        build_error(format!("Failed to acquire language lock: {}", e))
     })?;
     Ok(languages.keys().cloned().collect())
 }
@@ -305,7 +306,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
 
     Lazy::force(&QUERY_CAPTURE_CLASS, ruby);
     let struct_class = Lazy::try_get_inner(&QUERY_CAPTURE_CLASS)
-        .ok_or_else(|| Error::new(magnus::exception::runtime_error(), "Failed to get QueryCapture struct class"))?;
+        .ok_or_else(|| build_error("Failed to get QueryCapture struct class"))?;
     namespace.const_set("QueryCapture", struct_class)?;
 
     let query_match_class = namespace.define_class("QueryMatch", ruby.class_object())?;
