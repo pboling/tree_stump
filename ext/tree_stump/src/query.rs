@@ -18,7 +18,7 @@ pub struct Query {
 }
 
 impl Query {
-    pub fn new(language: &tree_sitter::LanguageRef<'_>, source: String) -> Result<Self, magnus::Error> {
+    pub fn new(language: &tree_sitter::Language, source: String) -> Result<Self, magnus::Error> {
         let raw_query = tree_sitter::Query::new(language, source.as_str());
         let raw_query = raw_query.map_err(|e| build_error(e.to_string()));
         raw_query.map(|q| Self {
@@ -46,14 +46,14 @@ impl Query {
     }
 
     pub fn capture_quantifiers(&self, index: usize) -> Result<RArray, Error> {
+        let ruby = Ruby::get().map_err(|_| {
+            build_error("Ruby is not initialized")
+        })?;
         let raw_query = self.raw_query.borrow();
         let quantifiers = raw_query
             .capture_quantifiers(index)
             .iter()
-            .map(|q| format!("{:?}", q).into_symbol());
-        let ruby = Ruby::get().map_err(|_| {
-            Error::new(magnus::exception::runtime_error(), "Ruby is not initialized")
-        })?;
+            .map(|q| format!("{:?}", q).into_symbol_with(&ruby));
         let array = ruby.ary_from_iter(quantifiers);
         Ok(array)
     }
@@ -157,7 +157,7 @@ impl QueryCursor {
         } else {
             Ok(Yield::Enumerator(rb_self.enumeratorize(
                 "matches",
-                (query, node, source.into_value()),
+                (query, node, source.into_value_with(ruby)),
             )))
         }
     }
@@ -188,13 +188,15 @@ impl QueryCursor {
         let start: Value = range.beg()?;
         let end: Value = range.end()?;
 
+        let ruby = Ruby::get().map_err(|_| build_error("Ruby is not initialized"))?;
+
         let start_typed_data = RTypedData::from_value(start).ok_or_else(|| {
-            Error::new(magnus::exception::type_error(), "Expected typed data for start point")
+            Error::new(ruby.exception_type_error(), "Expected typed data for start point")
         })?;
         let start = start_typed_data.get::<Point>()?;
 
         let end_typed_data = RTypedData::from_value(end).ok_or_else(|| {
-            Error::new(magnus::exception::type_error(), "Expected typed data for end point")
+            Error::new(ruby.exception_type_error(), "Expected typed data for end point")
         })?;
         let end = end_typed_data.get::<Point>()?;
 

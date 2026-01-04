@@ -60,7 +60,7 @@ pub struct TreeCursor<'cursor> {
 }
 
 impl<'cursor> TreeCursor<'cursor> {
-    pub fn node(&self) -> Node {
+    pub fn node(&self) -> Node<'_> {
         Node {
             raw_tree: Arc::clone(&self.raw_tree),
             raw_node: self.raw_cursor.borrow().node(),
@@ -517,10 +517,10 @@ impl<'tree> Node<'tree> {
         self.raw_node
             .utf8_text(source.as_bytes())
             .map(|s| s.to_string())
-            .map_err(|e| magnus::Error::new(magnus::exception::runtime_error(), format!("Failed to get utf8 text: {}", e)))
+            .map_err(|e| build_error(format!("Failed to get utf8 text: {}", e)))
     }
 
-    pub fn walk(&self) -> TreeCursor {
+    pub fn walk(&self) -> TreeCursor<'_> {
         TreeCursor {
             raw_tree: Arc::clone(&self.raw_tree),
             raw_cursor: RefCell::new(self.raw_node.walk()),
