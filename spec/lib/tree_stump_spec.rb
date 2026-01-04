@@ -54,6 +54,16 @@ RSpec.describe TreeStump do
       parser.parse(source).root_node
     end
 
+    # Helper method to recursively find all MISSING nodes in the tree
+    def find_missing_nodes(node, results = [])
+      results << node if node.is_missing?
+      node.child_count.times do |i|
+        child = node.child(i)
+        find_missing_nodes(child, results) if child
+      end
+      results
+    end
+
     describe "GC Safe" do
       it "can be GC safe" do
         node.child(0).child(0)
@@ -121,6 +131,50 @@ RSpec.describe TreeStump do
     describe "#is_error?" do
       it "returns true if the node is error" do
         expect(node.is_error?).to be_falsey
+      end
+    end
+
+    describe "#is_missing?" do
+      it "returns false for a normal node" do
+        expect(node.is_missing?).to be_falsey
+      end
+
+      context "when parsing incomplete code with missing syntax" do
+        # Incomplete method definition - missing 'end' keyword
+        let(:source) { "def foo" }
+
+        it "returns true for the missing node" do
+          # Parse the incomplete code
+          tree = parser.parse(source)
+          root = tree.root_node
+
+          # The tree should have an error due to missing 'end'
+          expect(root.has_error?).to be_truthy
+
+          # Find a MISSING node in the tree by traversing
+          missing_nodes = find_missing_nodes(root)
+          expect(missing_nodes).not_to be_empty
+          expect(missing_nodes.first.is_missing?).to be_truthy
+        end
+      end
+    end
+
+    describe "#missing?" do
+      it "is an alias for is_missing?" do
+        expect(node.missing?).to eq(node.is_missing?)
+      end
+
+      context "when parsing incomplete code with missing syntax" do
+        let(:source) { "def foo" }
+
+        it "returns true for the missing node" do
+          tree = parser.parse(source)
+          root = tree.root_node
+
+          missing_nodes = find_missing_nodes(root)
+          expect(missing_nodes).not_to be_empty
+          expect(missing_nodes.first.missing?).to be_truthy
+        end
       end
     end
 
