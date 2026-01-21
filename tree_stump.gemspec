@@ -29,7 +29,10 @@ Gem::Specification.new do |spec|
   spec.bindir = "exe"
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
-  spec.extensions = ["ext/tree_stump/Cargo.toml"]
+  spec.extensions = ["ext/tree_stump/extconf.rb"]
+
+  # Required for building the Rust extension
+  spec.add_dependency "rb_sys", "~> 0.9.119"
 
   # Uncomment to register a new dependency of your gem
   spec.add_development_dependency "rspec"
