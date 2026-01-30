@@ -33,7 +33,7 @@ Gem::Specification.new do |spec|
   spec.extensions = ["ext/tree_stump/extconf.rb"]
 
   # Required for building the Rust extension
-  spec.add_dependency "rb_sys", "~> 0.9.119"
+  spec.add_dependency "rb_sys", "~> 0.9.124"
 
   # Uncomment to register a new dependency of your gem
   spec.add_development_dependency "rspec"
