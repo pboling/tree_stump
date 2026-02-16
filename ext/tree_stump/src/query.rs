@@ -7,6 +7,7 @@ use magnus::{
     value::{InnerRef, Opaque, ReprValue},
     Class, Error, IntoValue, RArray, RStruct, RTypedData, Ruby, Value,
 };
+use streaming_iterator::StreamingIterator;
 
 use crate::{data::Point, tree::Node, util::build_error, QUERY_CAPTURE_CLASS};
 
@@ -45,14 +46,14 @@ impl Query {
     }
 
     pub fn capture_quantifiers(&self, index: usize) -> Result<RArray, Error> {
+        let ruby = Ruby::get().map_err(|_| {
+            build_error("Ruby is not initialized")
+        })?;
         let raw_query = self.raw_query.borrow();
         let quantifiers = raw_query
             .capture_quantifiers(index)
             .iter()
-            .map(|q| format!("{:?}", q).into_symbol());
-        let ruby = Ruby::get().map_err(|_| {
-            Error::new(magnus::exception::runtime_error(), "Ruby is not initialized")
-        })?;
+            .map(|q| format!("{:?}", q).into_symbol_with(&ruby));
         let array = ruby.ary_from_iter(quantifiers);
         Ok(array)
     }
@@ -130,11 +131,12 @@ impl QueryCursor {
         let mut cursor = rb_self.raw_cursor.borrow_mut();
         let raw_query = query.raw_query.borrow();
 
-        let matches = cursor.matches(&raw_query, node.get_raw_node(), source.as_bytes());
+        let mut matches = cursor.matches(&raw_query, node.get_raw_node(), source.as_bytes());
         let struct_class = QUERY_CAPTURE_CLASS.get_inner_ref_with(ruby);
         let array = ruby.ary_new();
 
-        for m in matches {
+        // tree-sitter 0.24+ uses StreamingIterator instead of Iterator
+        while let Some(m) = matches.next() {
             let captures = ruby.ary_new();
             for c in m.captures {
                 let r_struct = RStruct::from_value(
@@ -155,7 +157,7 @@ impl QueryCursor {
         } else {
             Ok(Yield::Enumerator(rb_self.enumeratorize(
                 "matches",
-                (query, node, source.into_value()),
+                (query, node, source.into_value_with(ruby)),
             )))
         }
     }
@@ -186,13 +188,15 @@ impl QueryCursor {
         let start: Value = range.beg()?;
         let end: Value = range.end()?;
 
+        let ruby = Ruby::get().map_err(|_| build_error("Ruby is not initialized"))?;
+
         let start_typed_data = RTypedData::from_value(start).ok_or_else(|| {
-            Error::new(magnus::exception::type_error(), "Expected typed data for start point")
+            Error::new(ruby.exception_type_error(), "Expected typed data for start point")
         })?;
         let start = start_typed_data.get::<Point>()?;
 
         let end_typed_data = RTypedData::from_value(end).ok_or_else(|| {
-            Error::new(magnus::exception::type_error(), "Expected typed data for end point")
+            Error::new(ruby.exception_type_error(), "Expected typed data for end point")
         })?;
         let end = end_typed_data.get::<Point>()?;
 

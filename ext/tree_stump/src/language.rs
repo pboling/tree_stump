@@ -8,7 +8,11 @@ unsafe impl Send for LanguageRef<'_> {}
 
 impl<'a> LanguageRef<'a> {
     pub fn version(&self) -> usize {
-        self.raw_language_ref.version()
+        self.raw_language_ref.abi_version()
+    }
+
+    pub fn abi_version(&self) -> usize {
+        self.raw_language_ref.abi_version()
     }
 
     pub fn node_kind_count(&self) -> usize {

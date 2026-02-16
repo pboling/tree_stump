@@ -52,7 +52,11 @@ RSpec.configure do |config|
     end
 
     def tree_sitter_ruby_path
-      File.join(project_root, 'tree-sitter-ruby', 'libtree-sitter-ruby.so')
+      # Use environment variable if set (for local development with pre-built grammars)
+      # Fall back to local path (for CI where tree-sitter-ruby is built as submodule)
+      ENV.fetch('TREE_SITTER_RUBY_PATH') {
+        File.join(project_root, 'tree-sitter-ruby', 'libtree-sitter-ruby.so')
+      }
     end
   end
 

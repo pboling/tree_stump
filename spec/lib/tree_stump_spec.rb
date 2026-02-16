@@ -54,6 +54,25 @@ RSpec.describe TreeStump do
       parser.parse(source).root_node
     end
 
+    # Helper method to recursively find all MISSING nodes in the tree
+    def find_missing_nodes(node, results = [])
+      results << node if node.is_missing?
+      node.child_count.times do |i|
+        child = node.child(i)
+        find_missing_nodes(child, results) if child
+      end
+      results
+    end
+
+    # Helper method to recursively traverse all nodes and yield to a block
+    def check_all_nodes(node, &block)
+      yield node
+      node.child_count.times do |i|
+        child = node.child(i)
+        check_all_nodes(child, &block) if child
+      end
+    end
+
     describe "GC Safe" do
       it "can be GC safe" do
         node.child(0).child(0)
@@ -121,6 +140,31 @@ RSpec.describe TreeStump do
     describe "#is_error?" do
       it "returns true if the node is error" do
         expect(node.is_error?).to be_falsey
+      end
+    end
+
+    describe "#is_missing?" do
+      it "returns false for a normal node" do
+        expect(node.is_missing?).to be_falsey
+      end
+
+      it "returns false for all nodes in valid code" do
+        # Verify that no nodes in valid code are marked as missing
+        missing_nodes = find_missing_nodes(node)
+        expect(missing_nodes).to be_empty
+      end
+    end
+
+    describe "#missing?" do
+      it "is an alias for is_missing?" do
+        expect(node.missing?).to eq(node.is_missing?)
+      end
+
+      it "returns false for all nodes in valid code" do
+        # Traverse all nodes and verify none are missing
+        all_not_missing = true
+        check_all_nodes(node) { |n| all_not_missing = false if n.missing? }
+        expect(all_not_missing).to be_truthy
       end
     end
 
