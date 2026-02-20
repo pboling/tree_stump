@@ -19,5 +19,5 @@ if RUBY_VERSION >= "4.1.0"
     ref: "5e2978121cd809d33fd1aeca54c685ebe6dc01de"
 else
   # Use released rb_sys gem for stable Rubies
-  gem "rb_sys", "~> 0.9.124"
+  # Rely on gemspec
 end
