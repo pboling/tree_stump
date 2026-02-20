@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby-version: ['3.3', '3.4', '4.0']
+        ruby-version: ['3.1']
         experimental: [false]
         include:
           # ruby-head - experimental, see if coming changes in MRI Ruby will break tree_stump
@@ -58,6 +58,8 @@ jobs:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true # runs 'bundle install' and caches installed gems automatically
           cache-version: 1 # Increment this to invalidate cache if needed
+          rubygems: '3.6.9'
+          bundler: '2.6.9'
 
       - name: Build tree-sitter-ruby grammar
         run: |
