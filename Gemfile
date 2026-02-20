@@ -10,8 +10,13 @@ gem "rake", "~> 13.0"
 gem "rake-compiler"
 
 # Ruby 4.0 compat
-# gem "rb_sys", "~> 0.9.124"
 # ruby 4.1 HEAD compat requires unreleased changes
-gem "rb_sys",
-    github: "oxidize-rb/rb-sys",
-    branch: "main"
+if RUBY_VERSION >= "4.1.0"
+  # Use rb_sys from GitHub for Ruby 4.1+ (ruby-head), pinned to a specific commit for reproducibility
+  gem "rb_sys",
+      github: "oxidize-rb/rb-sys",
+      ref: "0123456789abcdef0123456789abcdef01234567"
+else
+  # Use released rb_sys gem for stable Rubies
+  gem "rb_sys", "~> 0.9.124"
+end
