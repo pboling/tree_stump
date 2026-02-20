@@ -14,8 +14,9 @@ gem "rake-compiler"
 if RUBY_VERSION >= "4.1.0"
   # Use rb_sys from GitHub for Ruby 4.1+ (ruby-head), pinned to a specific commit for reproducibility
   gem "rb_sys",
-      github: "oxidize-rb/rb-sys",
-      ref: "0123456789abcdef0123456789abcdef01234567"
+    github: "oxidize-rb/rb-sys",
+    branch: "main",
+    ref: "5e2978121cd809d33fd1aeca54c685ebe6dc01de"
 else
   # Use released rb_sys gem for stable Rubies
   gem "rb_sys", "~> 0.9.124"
