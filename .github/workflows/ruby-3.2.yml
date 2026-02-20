@@ -1,4 +1,4 @@
-name: RSpec
+name: RSpec EOL Ruby 3.2
 
 on:
   schedule:
@@ -27,10 +27,6 @@ jobs:
       matrix:
         ruby-version: ['3.2']
         experimental: [false]
-        include:
-          # ruby-head - experimental, see if coming changes in MRI Ruby will break tree_stump
-          - ruby-version: 'ruby-head'
-            experimental: true
 
     steps:
       - uses: actions/checkout@v4
